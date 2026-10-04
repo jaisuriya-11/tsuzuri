@@ -13,10 +13,7 @@ Your notes stay plain Markdown files.
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
 </p>
 
-
-
 https://github.com/user-attachments/assets/86768fcb-3852-4e6b-8b07-6341bd9b3739
-
 
 </div>
 
@@ -33,6 +30,33 @@ curl -fsSL https://raw.githubusercontent.com/jaisuriya-11/tsuzuri/main/install.s
 ```powershell
 irm https://raw.githubusercontent.com/jaisuriya-11/tsuzuri/main/install.ps1 | iex
 ```
+
+**Nix flake**
+To run flake once:
+
+```sh
+nix run jaisuriya-11/tsuzuri
+
+```
+
+To install flake:
+Add flake to your flake imports
+
+```nix
+inputs = {
+    tsuzuri.url = "github:jaisuriya-11/tsuzuri"
+};
+```
+
+and outputs's inputs
+
+```nix
+outputs = {tsuzuri, ...} ...
+```
+
+then use in your configuration as `inputs.tsuzuri.packages.${pkgs.stdenv.hostPlatform.system}.default`.
+
+Then add to your packages as
 
 **Manual download:** grab `tsuzuri-macos.tar.gz`, `tsuzuri-linux.tar.gz` or
 `tsuzuri-windows.zip` from the
