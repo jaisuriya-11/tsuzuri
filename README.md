@@ -48,7 +48,7 @@ inputs = {
 };
 ```
 
-and outputs's inputs
+and outputs' inputs
 
 ```nix
 outputs = {tsuzuri, ...} ...
