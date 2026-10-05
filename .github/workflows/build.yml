@@ -30,6 +30,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Resolve Go modules
+        run: go mod tidy
+
       - name: Build Tsuzuri
         env:
           GOOS: linux
@@ -37,7 +40,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir -p dist
-          go build \
+          go build -mod=mod \
             -trimpath \
             -ldflags="-s -w" \
             -o "dist/tsuzuri-${{ matrix.name }}" \
