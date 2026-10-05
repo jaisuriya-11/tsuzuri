@@ -3,13 +3,13 @@ package app
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/jaisuriya-11/tsuzuri/internal/ui"
 
-	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
@@ -20,14 +20,10 @@ const toastDuration = 1800 * time.Millisecond
 // toastExpiredMsg hides toast number id (newer toasts keep their own timer).
 type toastExpiredMsg struct{ id int }
 
-// copyText puts text on the system clipboard (falling back to the OSC 52
-// terminal escape, which also works over SSH) and shows a toast.
+// copyText puts text on the system clipboard. Termux uses its native
+// clipboard command when available; other terminals use OSC 52.
 func (m *Model) copyText(text string) tea.Cmd {
-	write := m.writeClipboard
-	if write == nil {
-		write = clipboard.WriteAll
-	}
-	if err := write(text); err != nil {
+	if err := writeClipboard(text); err != nil {
 		termenv.NewOutput(os.Stdout).Copy(text)
 	}
 	n := utf8.RuneCountInString(text)
@@ -37,6 +33,23 @@ func (m *Model) copyText(text string) tea.Cmd {
 		msg = fmt.Sprintf("Copied %d lines", lines)
 	}
 	return m.showToast(msg)
+}
+
+func writeClipboard(text string) error {
+	// Do not use os/exec.LookPath here. On Android/Termux, the Go runtime's
+	// LookPath path can invoke faccessat2, which Android may reject with SIGSYS.
+	if strings.HasPrefix(os.Getenv("PREFIX"), "/data/data/com.termux/files/usr") {
+		cmd := exec.Command("/data/data/com.termux/files/usr/bin/termux-clipboard-set")
+		cmd.Stdin = strings.NewReader(text)
+		if err := cmd.Run(); err == nil {
+			return nil
+		}
+	}
+
+	// OSC 52 is handled by the terminal and does not require a clipboard
+	// utility to be installed.
+	termenv.NewOutput(os.Stdout).Copy(text)
+	return nil
 }
 
 func (m *Model) showToast(text string) tea.Cmd {
