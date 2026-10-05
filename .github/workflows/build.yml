@@ -9,14 +9,16 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.arch }}
+    name: Build ${{ matrix.name }}
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        arch:
-          - amd64
-          - arm64
+        include:
+          - name: linux-amd64
+            goarch: amd64
+          - name: termux-aarch64
+            goarch: arm64
 
     steps:
       - name: Checkout
@@ -31,18 +33,21 @@ jobs:
       - name: Build Tsuzuri
         env:
           GOOS: linux
-          GOARCH: ${{ matrix.arch }}
+          GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
           mkdir -p dist
           go build \
             -trimpath \
             -ldflags="-s -w" \
-            -o "dist/tsuzuri-linux-${{ matrix.arch }}" \
+            -o "dist/tsuzuri-${{ matrix.name }}" \
             ./cmd/tsuzuri
+
+      - name: Verify binary
+        run: file "dist/tsuzuri-${{ matrix.name }}"
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: tsuzuri-linux-${{ matrix.arch }}
-          path: dist/tsuzuri-linux-${{ matrix.arch }}
+          name: tsuzuri-${{ matrix.name }}
+          path: dist/tsuzuri-${{ matrix.name }}
