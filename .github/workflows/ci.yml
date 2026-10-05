@@ -30,6 +30,9 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve Go modules
+        run: go mod tidy
+
       - name: Vet
         run: go vet ./...
 
@@ -37,7 +40,7 @@ jobs:
         run: go test ./...
 
       - name: Build
-        run: go build ./cmd/tsuzuri
+        run: go build -mod=mod ./cmd/tsuzuri
 
   # Build the Nix flake so a stale vendorHash or version fails here, not for
   # users running `nix run github:jaisuriya-11/tsuzuri`.
