@@ -24,6 +24,8 @@ type Model struct {
 	rawContent string
 	baseDir    string
 	cal        CalendarView
+	notes      NoteLookup
+	backlinks  []core.Backlink
 	hits       []Hit
 	pendingZ   bool
 	focused    bool
@@ -144,7 +146,20 @@ func (m *Model) recompile() {
 	if vpWidth <= 0 {
 		vpWidth = m.width - 2*m.margin
 	}
-	compiled, hits, blocks := CompileBlocks(m.rawContent, m.theme, vpWidth, m.baseDir, m.cal)
+	cal := m.cal
+	if m.notes != nil {
+		self := Note{ID: m.pageID, Title: m.title, Content: m.rawContent, Dir: m.baseDir}
+		cal.Notes = func(target string) (Note, bool) {
+			if target == "" {
+				return self, true
+			}
+			return m.notes(target)
+		}
+	}
+	compiled, hits, blocks := CompileBlocks(m.rawContent, m.theme, vpWidth, m.baseDir, cal)
+	if len(m.backlinks) > 0 {
+		compiled, hits = m.appendBacklinks(compiled, hits, vpWidth)
+	}
 	m.hits, m.blocks = hits, blocks
 	if m.hover >= len(blocks) {
 		m.hover = -1

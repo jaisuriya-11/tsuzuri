@@ -29,6 +29,12 @@ type buffer struct {
 
 func (b *buffer) draft() bool { return isDraftID(b.id) }
 
+// graphID is the graph's tab. It counts as a draft (no file behind it)
+// that is never dirty and never saved.
+const graphID = draftIDPrefix + "graph"
+
+func (b *buffer) isGraph() bool { return b.id == graphID }
+
 func (b *buffer) fileName() string {
 	if b.draft() {
 		return b.title
@@ -117,6 +123,11 @@ func (m *Model) showBuffer(b *buffer) {
 	m.content.SetBuffer(b.page(), b.draft())
 	m.preview.SetBaseDir(m.noteDir(b))
 	m.preview.SetPage(b.page())
+	m.refreshLinks()
+	if b.isGraph() {
+		m.content.SetBuffer(core.Page{}, false)
+		m.previewNote(m.graph.Selected())
+	}
 	m.sidebar.SetActiveID(b.id)
 	if !b.draft() {
 		m.sidebar.SetSelectedID(b.id)
@@ -245,6 +256,9 @@ func (m *Model) closeBuffer(id string, force bool) tea.Cmd {
 // opens first; after runs once the file is safely written.
 func (m *Model) saveBuffer(b *buffer, after func(*Model) tea.Cmd) tea.Cmd {
 	text := m.liveText(b)
+	if b.isGraph() {
+		return nil
+	}
 	if b.draft() {
 		m.openSaveAs(b, after)
 		return nil
@@ -256,6 +270,7 @@ func (m *Model) saveBuffer(b *buffer, after func(*Model) tea.Cmd) tea.Cmd {
 		return nil
 	}
 	b.saved, b.text = saved.Content, saved.Content
+	m.refreshGraph()
 	m.setStatus(fmt.Sprintf("\"%s\" %dL written", b.id, strings.Count(text, "\n")+1))
 	m.refreshModified()
 	if after != nil {

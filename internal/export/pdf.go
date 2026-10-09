@@ -31,6 +31,7 @@ import (
 	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/font/sfnt"
 
+	"github.com/jaisuriya-11/tsuzuri/internal/core"
 	"github.com/jaisuriya-11/tsuzuri/internal/highlight"
 	"github.com/jaisuriya-11/tsuzuri/internal/preview"
 	"github.com/jaisuriya-11/tsuzuri/internal/theme"
@@ -924,6 +925,15 @@ func parseInline(s string) []run {
 					r.italic = true
 					walk(rest[1:1+end], r)
 					i += 1 + end + 1
+					continue
+				}
+			case strings.HasPrefix(rest, "[[") || strings.HasPrefix(rest, "![["):
+				if l, n, ok := core.WikiLinkAt(rest); ok {
+					emit()
+					r := st
+					r.text = orDefault(l.Label(), l.Target)
+					out = append(out, r)
+					i += n
 					continue
 				}
 			case strings.HasPrefix(rest, "!["):

@@ -191,3 +191,37 @@ func copyFile(src, dst string) error {
 	}
 	return out.Close()
 }
+
+// FindFile locates a non-note file a link names ("diagram.png" or
+// "assets/diagram.png"): next to fromID first, then from the workspace root,
+// then anywhere in the workspace by name. It returns the absolute path.
+func (s *Store) FindFile(name, fromID string) (string, bool) {
+	name = strings.Trim(filepath.ToSlash(strings.TrimSpace(name)), "/")
+	if name == "" || strings.Contains(name, "..") {
+		return "", false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, rel := range []string{path.Join(path.Dir(fromID), name), name} {
+		if abs := s.idToAbs(rel); fileExists(abs) {
+			return abs, true
+		}
+	}
+	base := strings.ToLower(path.Base(name))
+	found := ""
+	_ = filepath.WalkDir(s.root, func(p string, d os.DirEntry, err error) error {
+		switch {
+		case err != nil:
+			return nil
+		case strings.HasPrefix(d.Name(), ".") && p != s.root:
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+		case !d.IsDir() && strings.ToLower(d.Name()) == base:
+			found = p
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found, found != ""
+}

@@ -27,6 +27,7 @@ var keymapSections = [][]keymapSection{
 			{"SPC x", "Close tab"},
 			{"SPC p", "Toggle preview"},
 			{"SPC t", "Themes"},
+			{"SPC g", "Graph of this note's links"},
 			{"SPC d", "Home screen"},
 			{"Ctrl+C", "Quit (asks to save)"},
 		}},
@@ -55,6 +56,8 @@ var keymapSections = [][]keymapSection{
 			{"yy / p", "Copy line / paste"},
 			{"v / V", "Select, then y copy, d cut"},
 			{"/ (insert)", "Block menu: headings, lists…"},
+			{"[[ (insert)", "Link to a note"},
+			{"gd / gx", "Follow the link under the cursor"},
 		}},
 		{" COMMANDS", [][2]string{
 			{":w", "Save"},

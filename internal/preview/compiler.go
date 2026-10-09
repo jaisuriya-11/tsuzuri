@@ -82,6 +82,7 @@ type compiler struct {
 	// Document positions of the block being rendered.
 	lineOffset, fence, fenceEnd int
 	cal                         CalendarView
+	depth                       int // embed nesting: 0 for the note itself
 	out                         []string
 	para                        []string
 
@@ -207,11 +208,29 @@ func CompileBlocks(input string, th theme.Theme, contentWidth int, baseDir strin
 		contentWidth = 40
 	}
 	c := &compiler{st: newStyles(th), width: contentWidth, baseDir: baseDir, cal: cal}
+	c.compile(input)
 
+	for len(c.out) > 0 && c.out[len(c.out)-1] == "" {
+		c.out = c.out[:len(c.out)-1]
+	}
+	c.collectLinks()
+	sort.SliceStable(c.blocks, func(a, b int) bool {
+		if c.blocks[a].Row != c.blocks[b].Row {
+			return c.blocks[a].Row < c.blocks[b].Row
+		}
+		return c.blocks[a].H > c.blocks[b].H
+	})
+	return strings.Join(c.out, "\n"), c.hits, c.blocks
+}
+
+// compile renders a whole note (or, for an embed, part of one) into c.out.
+func (c *compiler) compile(input string) {
 	meta, body := SplitFrontMatter(input)
 	c.lineOffset = strings.Count(input, "\n") - strings.Count(body, "\n")
 	input = body
-	c.header(meta)
+	if c.depth == 0 {
+		c.header(meta)
+	}
 
 	input = htmlCommentRegex.ReplaceAllString(strings.ReplaceAll(input, "\t", "    "), "")
 	lines := strings.Split(input, "\n")
@@ -305,6 +324,18 @@ func CompileBlocks(input string, th theme.Theme, contentWidth int, baseDir strin
 			continue
 		}
 
+		// A line holding only "![[Note]]" shows that note (or image) here.
+		if l, ok := standaloneEmbed(trimmed); ok {
+			c.flushPara()
+			c.openBlock(i, i+1)
+			c.embed(l)
+			continue
+		}
+
+		// Block ids ("^id") are link anchors, not text.
+		line = stripBlockID(line)
+		trimmed = strings.TrimSpace(line)
+
 		// Lines made only of HTML layout tags (<div>, </p>, <br> …) vanish;
 		// inline HTML elsewhere is handled by the inline parser.
 		if isTagOnly(trimmed) {
@@ -333,12 +364,17 @@ func CompileBlocks(input string, th theme.Theme, contentWidth int, baseDir strin
 			key := c.foldKey("h", m[1]+m[2])
 			folded := c.folded(key)
 			arrow := "▾ "
-			if folded {
+			switch {
+			case c.depth > 0:
+				arrow = "" // embedded sections don't fold
+			case folded:
 				arrow = "▸ "
 			}
 			prefix := arrow + []string{"󰉫 ", "󰉬 ", "󰉭 ", "󰉮 ", "󰉯 ", "󰉰 "}[level-1]
 			c.blank()
-			c.hits = append(c.hits, Hit{Row: len(c.out), H: 1, X1: c.width, Kind: "fold", Arg: key, Line: -1})
+			if c.depth == 0 {
+				c.hits = append(c.hits, Hit{Row: len(c.out), H: 1, X1: c.width, Kind: "fold", Arg: key, Line: -1})
+			}
 			heading := c.wrapIndent(c.inline(m[2], st), st.Render(prefix), "    ")
 			end := i + 1
 			if folded {
@@ -418,17 +454,6 @@ func CompileBlocks(input string, th theme.Theme, contentWidth int, baseDir strin
 	}
 	c.flushPara()
 	c.closeBlocks(len(lines))
-
-	for len(c.out) > 0 && c.out[len(c.out)-1] == "" {
-		c.out = c.out[:len(c.out)-1]
-	}
-	sort.SliceStable(c.blocks, func(a, b int) bool {
-		if c.blocks[a].Row != c.blocks[b].Row {
-			return c.blocks[a].Row < c.blocks[b].Row
-		}
-		return c.blocks[a].H > c.blocks[b].H
-	})
-	return strings.Join(c.out, "\n"), c.hits, c.blocks
 }
 
 // listItemEnd is the line after list item i and the more-indented lines

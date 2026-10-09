@@ -55,7 +55,8 @@ type StatusMsg struct {
 }
 
 // SlashActionMsg is emitted by "/" menu entries the app must handle:
-// "page" (new sub-note) and "link" (pick a note to link to).
+// "page" (new sub-note) and "link" (pick a note to link to), and by typing
+// "[[" ("wikilink": pick the note to finish the [[link]]).
 type SlashActionMsg struct {
 	Action string
 }
@@ -72,8 +73,18 @@ type ExportMsg struct {
 	Path string
 }
 
+// GraphMsg opens the graph of notes and links (":graph").
+type GraphMsg struct{}
+
 // ThemeMsg switches the colour theme (":colorscheme name"). An empty Name
 // opens the theme picker.
 type ThemeMsg struct {
 	Name string
+}
+
+// FollowLinkMsg is emitted by "gd" / "gx" in the editor: open the link on
+// Line (the cursor's line) at rune column Col.
+type FollowLinkMsg struct {
+	Line string
+	Col  int
 }

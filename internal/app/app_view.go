@@ -40,7 +40,11 @@ func (m Model) View() string {
 		if l.SidebarW > 0 {
 			cols = append(cols, m.sidebar.View(), div(dividerSidebar))
 		}
-		cols = append(cols, m.content.View())
+		if m.graphActive() {
+			cols = append(cols, m.graph.View())
+		} else {
+			cols = append(cols, m.content.View())
+		}
 		if l.PreviewW > 0 {
 			cols = append(cols, div(dividerPreview), m.preview.View())
 		}

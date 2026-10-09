@@ -134,6 +134,8 @@ func (m *Model) handleViewHit(h preview.Hit) tea.Cmd {
 		return m.formHit(h)
 	case strings.HasPrefix(h.Kind, "table:"):
 		return m.tableHit(h)
+	case strings.HasPrefix(h.Kind, "link:"):
+		return m.followHit(h)
 	}
 	return nil
 }

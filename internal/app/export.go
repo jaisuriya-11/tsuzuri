@@ -4,9 +4,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-
 	"github.com/jaisuriya-11/tsuzuri/internal/export"
+	"github.com/jaisuriya-11/tsuzuri/internal/preview"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // exportPDF writes the open note as a PDF (":export [file]"), next to the
@@ -19,7 +20,14 @@ func (m *Model) exportPDF(arg string) tea.Cmd {
 	}
 	dir := m.noteDir(b)
 	out := export.Target(arg, dir, b.title)
-	if err := export.WriteFile(m.liveText(b), export.Options{Title: b.title, BaseDir: dir}, out); err != nil {
+	text, notes := m.liveText(b), m.noteLookup()
+	lookup := func(target string) (preview.Note, bool) {
+		if target == "" {
+			return preview.Note{ID: b.id, Title: b.title, Content: text, Dir: dir}, true
+		}
+		return notes(target)
+	}
+	if err := export.WriteFile(export.Printable(text, lookup), export.Options{Title: b.title, BaseDir: dir}, out); err != nil {
 		m.setError("Export failed: " + err.Error())
 		return nil
 	}

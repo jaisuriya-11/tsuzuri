@@ -58,6 +58,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			} else {
 				m.maybeOpenSlash(k)
 			}
+			if k.Type == tea.KeyRunes && string(k.Runes) == "[" && strings.HasSuffix(m.textarea.LineBeforeCursor(), "[[") {
+				return m, tea.Batch(cmd, func() tea.Msg { return core.SlashActionMsg{Action: "wikilink"} })
+			}
 		}
 		return m, cmd
 
@@ -121,6 +124,10 @@ func (m Model) handleNormalKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			ta.DeleteLine()
 		case "yy":
 			return m, copyCmd(ta.CurrentLine() + "\n")
+		case "gd", "gx":
+			line := ta.CurrentLine()
+			_, col := ta.RowCol()
+			return m, func() tea.Msg { return core.FollowLinkMsg{Line: line, Col: col} }
 		}
 		return m, nil
 	}

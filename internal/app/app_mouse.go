@@ -49,9 +49,7 @@ func (m *Model) handleMouse(msg tea.MouseMsg) tea.Cmd {
 		local := msg
 		local.X -= l.EditorX
 		local.Y -= l.BodyY
-		var cmd tea.Cmd
-		m.content, cmd = m.content.Update(local)
-		return cmd
+		return m.editorPaneUpdate(local)
 	}
 	if msg.Action != tea.MouseActionPress {
 		return nil
@@ -96,7 +94,7 @@ func (m *Model) handleMouse(msg tea.MouseMsg) tea.Cmd {
 		m.sidebar, cmd = m.sidebar.Update(local)
 	case focusEditor:
 		m.dragging = msg.Button == tea.MouseButtonLeft
-		m.content, cmd = m.content.Update(local)
+		cmd = m.editorPaneUpdate(local)
 	case focusPreview:
 		m.preview, cmd = m.preview.Update(local)
 	}
