@@ -205,7 +205,7 @@ func (m *Model) statusline() string {
 		if b != nil && m.isDirty(b) {
 			left += light.Foreground(th.Green).Render("● ")
 		}
-		if b != nil && b.draft() {
+		if b != nil && b.draft() && !b.isGraph() {
 			left += light.Foreground(th.Yellow).Render("unsaved ")
 		}
 		left += lipgloss.NewStyle().Background(th.StatusBg).Foreground(th.LightBg).Render("")

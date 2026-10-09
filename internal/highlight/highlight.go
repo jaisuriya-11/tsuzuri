@@ -120,6 +120,8 @@ var (
 	ruleRe    = regexp.MustCompile(`^\s*(-{3,}|\*{3,}|_{3,})\s*$`)
 	codeSpan  = regexp.MustCompile("`[^`]+`")
 	linkRe    = regexp.MustCompile(`!?\[[^\]]*\]\([^)]*\)`)
+	wikiRe    = regexp.MustCompile(`!?\[\[[^\[\]\n]+\]\]`)
+	blockIDRe = regexp.MustCompile(`\s\^[A-Za-z0-9-]+\s*$`)
 	tagRe     = regexp.MustCompile(`</?[a-zA-Z][^>]*>`)
 	emphRe    = regexp.MustCompile(`\*\*|__|~~`)
 )
@@ -228,6 +230,15 @@ func inline(line string, cols []lipgloss.Color, th theme.Theme) {
 		mid := strings.Index(s, "](")
 		fill(cols, runeIdx(line, m[0]), runeIdx(line, m[0]+mid+1), th.Blue)
 		fill(cols, runeIdx(line, m[0]+mid+1), runeIdx(line, m[1]), th.GreyFg2)
+	}
+	for _, m := range wikiRe.FindAllStringIndex(line, -1) {
+		open := strings.Index(line[m[0]:m[1]], "[[") + 2
+		fill(cols, runeIdx(line, m[0]), runeIdx(line, m[0]+open), th.GreyFg)
+		fill(cols, runeIdx(line, m[0]+open), runeIdx(line, m[1]-2), th.Blue)
+		fill(cols, runeIdx(line, m[1]-2), runeIdx(line, m[1]), th.GreyFg)
+	}
+	for _, m := range blockIDRe.FindAllStringIndex(line, -1) {
+		fill(cols, runeIdx(line, m[0]), runeIdx(line, m[1]), th.GreyFg)
 	}
 	for _, m := range codeSpan.FindAllStringIndex(line, -1) {
 		fill(cols, runeIdx(line, m[0]), runeIdx(line, m[1]), th.Orange)

@@ -20,6 +20,7 @@ func (m *Model) applyTheme(th theme.Theme, persist bool) {
 	m.sidebar.SetTheme(th)
 	m.content.SetTheme(th)
 	m.preview.SetTheme(th)
+	m.graph.SetTheme(th)
 	if persist && m.configPath != "" {
 		cfg, _ := config.Load(m.configPath)
 		cfg.Theme = th.Name

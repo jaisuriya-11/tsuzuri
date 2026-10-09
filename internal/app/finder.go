@@ -26,6 +26,7 @@ type finder struct {
 	offset  int
 	lines   map[string][]string // note text, split into lines
 	link    bool                // pick a note to link to instead of opening it
+	wiki    bool                // finish a typed "[[" instead of a Markdown link
 }
 
 // maxTextHits caps text matches so huge workspaces stay responsive.
@@ -211,12 +212,24 @@ func finderLayout(W, H int) finderGeom {
 
 func (m *Model) finderOpen(f *finder, newTab bool) tea.Cmd {
 	p, ok := f.selected()
+	if f.wiki && !ok {
+		// No such note yet: link to it anyway; following it starts it.
+		if q := strings.TrimSpace(f.input.Value()); q != "" {
+			m.finder = nil
+			m.insertWikiText(q)
+			return m.focusPane(focusEditor)
+		}
+	}
 	if !ok {
 		return nil
 	}
 	if f.link {
 		m.finder = nil
-		m.insertLinkTo(p)
+		if f.wiki {
+			m.insertWikiLink(p)
+		} else {
+			m.insertLinkTo(p)
+		}
 		return m.focusPane(focusEditor)
 	}
 	line := f.matches[f.sel].line

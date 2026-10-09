@@ -45,6 +45,9 @@ type CalendarView struct {
 	Folded map[string]bool
 	// FoldAll collapses every heading and code block (zM).
 	FoldAll bool
+	// Notes resolves [[links]] and draws ![[embeds]]; nil treats every link
+	// as resolved and every embed as missing.
+	Notes NoteLookup
 }
 
 // calendarNav is the clickable header on every calendar.

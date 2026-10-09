@@ -79,6 +79,54 @@ tsuzuri export note.md         # write note.pdf next to the note (-o to pick the
 - **2, 3 and 4 column layouts** from the `/` menu.
 - **Resizable panes**: drag the dividers between the explorer, editor and preview.
 - **Fast search** across file names and note contents.
+- **Links between notes** with `[[Note]]`: jump to headings and blocks, embed one note in another, and see what links back.
+- **Graph view** (`:graph`): a zoomable map of how your notes link together, with a live preview beside it.
+
+## Links
+
+Type `[[` to link to another note. Click a link in the preview, or press
+`gd` on it in the editor, to follow it.
+
+```md
+[[Docker]]                          open a note
+[[AWS Notes#S3 Storage]]            open it at a heading
+[[AWS Notes#S3 Storage|Learn S3]]   show your own text
+[[AWS Notes#^s3-basics]]            open it at a block marked ^s3-basics
+![[AWS Notes#^s3-basics]]           show that block right here
+![[diagram.png]]                    show an image from anywhere in the workspace
+```
+
+Mark a paragraph or list item as a block by ending it with ` ^some-id`.
+A link to a note that doesn't exist yet is dimmed; following it starts that
+note, and nothing is written until you save. Every note lists the notes that
+link to it at the bottom of the preview. Web links (`[text](https://…)` and
+`<https://…>`) open in your browser.
+
+### Graph
+
+`:graph` (or `Space g`) opens the graph in a tab, centred on the note you
+were in: notes that link to it on the left, the notes it links to on the
+right. The preview on the right shows whichever note is selected.
+
+```
+                              ╭─● Untitled-1
+           Other ●─╮          │            ╭─● EC2
+                   ├─● Note ──┼─● AWS ─────┤
+ Index ●─── Study ●─╯          │            ╰─● S3
+                              ╰─● Docker
+```
+
+The graph is used with the mouse:
+
+- Click a note to preview it; click it again to open it.
+- Scroll to zoom out and in: zoomed out, the map also shows the links of
+  those notes, up to four steps away. The `−` and `+` buttons do the same.
+- Drag to move around the map; `reset` puts it back.
+- `centre` re-centres the map on the selected note; `back` returns to the
+  previous one.
+
+Close the graph like any tab.
+It picks up links as you type them in other tabs.
 
 ## Flowcharts
 

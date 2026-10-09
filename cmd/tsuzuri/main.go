@@ -13,6 +13,7 @@ import (
 	"github.com/jaisuriya-11/tsuzuri/internal/config"
 	"github.com/jaisuriya-11/tsuzuri/internal/core"
 	"github.com/jaisuriya-11/tsuzuri/internal/export"
+	"github.com/jaisuriya-11/tsuzuri/internal/preview"
 	"github.com/jaisuriya-11/tsuzuri/internal/theme"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -182,7 +183,18 @@ func runExport(args []string) int {
 		}
 	}
 	dest := export.Target(target, dir, name)
-	if err := export.WriteFile(string(data), export.Options{Title: name, BaseDir: dir}, dest); err != nil {
+	text := string(data)
+	// ![[embeds]] resolve against the notes in the note's folder.
+	if store, err := core.NewStore(dir); err == nil {
+		notes := preview.StoreNotes(store, nil, filepath.Base(note), nil)
+		text = export.Printable(text, func(t string) (preview.Note, bool) {
+			if t == "" {
+				return preview.Note{Title: name, Content: string(data), Dir: dir}, true
+			}
+			return notes(t)
+		})
+	}
+	if err := export.WriteFile(text, export.Options{Title: name, BaseDir: dir}, dest); err != nil {
 		fmt.Fprintf(os.Stderr, "Export failed: %v\n", err)
 		return 1
 	}

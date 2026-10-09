@@ -133,3 +133,16 @@ func TestMarkdownHighlightsFencedCode(t *testing.T) {
 		t.Errorf("list marker should be coloured")
 	}
 }
+
+func TestWikiLinkAndBlockIDHighlight(t *testing.T) {
+	th := theme.DefaultTheme()
+	line := "go [[AWS#S3|s3]] now ^ref"
+	cols := highlight.Markdown(line, th)[0]
+	at := func(s string) int { return len([]rune(line[:strings.Index(line, s)])) }
+	if cols[at("[[")] != th.GreyFg || cols[at("AWS")] != th.Blue || cols[at("]]")] != th.GreyFg {
+		t.Errorf("wiki link colours = %v", cols)
+	}
+	if cols[at("^ref")] != th.GreyFg || cols[at("now")] != "" {
+		t.Errorf("block id colours = %v", cols)
+	}
+}

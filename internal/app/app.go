@@ -9,6 +9,7 @@ import (
 	"github.com/jaisuriya-11/tsuzuri/internal/content"
 	"github.com/jaisuriya-11/tsuzuri/internal/core"
 	"github.com/jaisuriya-11/tsuzuri/internal/dashboard"
+	"github.com/jaisuriya-11/tsuzuri/internal/graph"
 	"github.com/jaisuriya-11/tsuzuri/internal/preview"
 	"github.com/jaisuriya-11/tsuzuri/internal/sidebar"
 	"github.com/jaisuriya-11/tsuzuri/internal/theme"
@@ -69,6 +70,8 @@ type Model struct {
 	statusErr bool
 
 	writeClipboard func(string) error
+	openURL        func(string) error // opens links outside Tsuzuri; nil = system opener
+	notes          []core.Page        // every note, for resolving [[links]]
 
 	toast    string
 	toastSeq int
@@ -81,6 +84,10 @@ type Model struct {
 	sidebar   sidebar.Model
 	content   content.Model
 	preview   preview.Model
+	graph     graph.Model
+
+	graphNotes []core.Page // the workspace's notes and links, from disk
+	graphEdges []core.Edge
 }
 
 // Option customises the app at construction.
@@ -98,6 +105,12 @@ func WithTheme(name string) Option {
 // WithClipboard replaces the system clipboard writer (used by tests).
 func WithClipboard(write func(string) error) Option {
 	return func(m *Model) { m.writeClipboard = write }
+}
+
+// WithOpener replaces the system opener for web links and files (used by
+// tests).
+func WithOpener(open func(string) error) Option {
+	return func(m *Model) { m.openURL = open }
 }
 
 // WithConfigPath saves theme changes to the given config file.
@@ -122,6 +135,7 @@ func New(store *core.Store, opts ...Option) Model {
 		sidebar:     sidebar.New(th),
 		content:     content.New(th),
 		preview:     preview.New(th),
+		graph:       graph.New(th),
 	}
 	m.sidebar.SetWorkspaceName(filepath.Base(store.Root()))
 	m.dashboard.SetWorkspace(tildePath(store.Root()))
@@ -155,6 +169,7 @@ func (m *Model) updateLayout() {
 	m.sidebar.SetSize(l.SidebarW, l.BodyH)
 	m.content.SetSize(l.EditorW, l.BodyH)
 	m.preview.SetSize(l.PreviewW, l.BodyH)
+	m.graph.SetSize(l.EditorW, l.BodyH)
 	if m.focus == focusPreview && l.PreviewW == 0 {
 		m.focusPane(focusEditor)
 	}
@@ -164,6 +179,14 @@ func (m *Model) reloadTree() {
 	pages := m.store.List()
 	m.sidebar.SetPages(pages)
 	m.dashboard.SetRecentPages(pages)
+	m.notes = nil
+	for _, p := range pages {
+		if !p.IsFolder {
+			m.notes = append(m.notes, p)
+		}
+	}
+	m.refreshLinks()
+	m.refreshGraph()
 }
 
 func (m *Model) setStatus(s string) { m.status, m.statusErr = s, false }
@@ -182,6 +205,7 @@ func (m *Model) focusPane(f focus) tea.Cmd {
 	m.focus = f
 	m.sidebar.SetFocused(f == focusSidebar)
 	m.preview.SetFocused(f == focusPreview)
+	m.graph.SetFocused(f == focusEditor)
 	if f == focusEditor {
 		return m.content.Focus()
 	}

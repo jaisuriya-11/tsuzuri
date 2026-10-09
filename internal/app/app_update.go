@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jaisuriya-11/tsuzuri/internal/core"
+	"github.com/jaisuriya-11/tsuzuri/internal/graph"
 	"github.com/jaisuriya-11/tsuzuri/internal/preview"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -91,8 +92,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.openFile(msg.ID)
 	case core.FindRequestMsg:
 		return m, m.openFinder()
+	case core.GraphMsg:
+		return m, m.openGraph()
+	case graph.OpenMsg:
+		return m, m.openFile(msg.ID)
+	case graph.SelectMsg:
+		m.previewNote(msg.ID)
+		return m, nil
 	case preview.HitMsg:
 		return m, m.handleViewHit(msg.Hit)
+	case core.FollowLinkMsg:
+		return m, m.followEditorLink(msg)
 	case preview.MoveBlockMsg:
 		if m.activeBuffer() != nil {
 			m.setDocLines(moveBlock(m.docLines(), msg.Line, msg.End, msg.To))
@@ -117,6 +127,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.newDraft(parent)
 		case "link":
 			return m, m.openLinkPicker()
+		case "wikilink":
+			cmd := m.openLinkPicker()
+			m.finder.wiki = true
+			return m, cmd
 		}
 		if kind, ok := strings.CutPrefix(msg.Action, "media:"); ok {
 			return m, m.pickMedia(kind)

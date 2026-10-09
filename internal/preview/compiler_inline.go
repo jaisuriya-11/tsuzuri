@@ -3,6 +3,8 @@ package preview
 import (
 	"strings"
 
+	"github.com/jaisuriya-11/tsuzuri/internal/core"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -64,6 +66,13 @@ func (c *compiler) inline(s string, base lipgloss.Style) string {
 				continue
 			}
 
+		case strings.HasPrefix(rest, "[[") || strings.HasPrefix(rest, "![["):
+			if l, n, ok := core.WikiLinkAt(rest); ok {
+				emit(c.wikiLink(l))
+				i += n
+				continue
+			}
+
 		case strings.HasPrefix(rest, "!["):
 			if text, _, n, ok := linkAt(rest[1:]); ok {
 				emit(lipgloss.NewStyle().Foreground(c.st.th.Purple).Render("󰋩 " + orDefault(text, "image")))
@@ -72,8 +81,8 @@ func (c *compiler) inline(s string, base lipgloss.Style) string {
 			}
 
 		case rest[0] == '[':
-			if text, _, n, ok := linkAt(rest); ok {
-				emit(c.inline(text, c.st.link))
+			if text, url, n, ok := linkAt(rest); ok {
+				emit(markLink("url", strings.Trim(url, "<>"), c.inline(text, c.st.link)))
 				i += n
 				continue
 			}
@@ -87,7 +96,7 @@ func (c *compiler) inline(s string, base lipgloss.Style) string {
 			lower := strings.ToLower(tag)
 			switch {
 			case strings.HasPrefix(lower, "<http"):
-				emit(c.st.link.Render(tag[1 : len(tag)-1]))
+				emit(markLink("url", tag[1:len(tag)-1], c.st.link.Render(tag[1:len(tag)-1])))
 			case strings.HasPrefix(lower, "<img"):
 				emit(lipgloss.NewStyle().Foreground(c.st.th.Purple).Render("󰋩 " + orDefault(attr(altAttr, tag), "image")))
 			case strings.HasPrefix(lower, "<a "):

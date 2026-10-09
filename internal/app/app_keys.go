@@ -21,7 +21,7 @@ func (m *Model) handleKey(k tea.KeyMsg) tea.Cmd {
 	}
 
 	sidebarBusy := m.focus == focusSidebar && m.sidebar.IsBusy()
-	editorBusy := m.focus == focusEditor && m.content.Mode() != content.ModeNormal
+	editorBusy := m.focus == focusEditor && m.content.Mode() != content.ModeNormal && !m.graphActive()
 
 	// VSCode-style shortcuts work in every mode.
 	switch {
@@ -79,6 +79,10 @@ func (m *Model) handleKey(k tea.KeyMsg) tea.Cmd {
 	case focusPreview:
 		m.preview, cmd = m.preview.Update(k)
 	default:
+		if m.graphActive() {
+			m.graph, cmd = m.graph.Update(k)
+			return cmd
+		}
 		if m.activeBuffer() == nil && s == "i" {
 			return m.newDraft(m.sidebar.ContextParentID())
 		}
@@ -86,6 +90,9 @@ func (m *Model) handleKey(k tea.KeyMsg) tea.Cmd {
 		if b := m.activeBuffer(); b != nil {
 			m.preview.SetContent(m.content.Value())
 			m.refreshModified()
+			if m.bufferIndex(graphID) >= 0 {
+				m.liveGraph()
+			}
 		}
 	}
 	return cmd
@@ -110,6 +117,8 @@ func (m *Model) handleLeader(s string) tea.Cmd {
 		return m.cycleBuffer(-1)
 	case "t":
 		return m.openThemePicker()
+	case "g":
+		return m.openGraph()
 	case "d":
 		m.goHome()
 	case "h", "?":
@@ -136,6 +145,8 @@ func (m *Model) handleDashboardKey(k tea.KeyMsg) tea.Cmd {
 		return nil
 	case "t":
 		return m.openThemePicker()
+	case "g":
+		return m.openGraph()
 	case "q":
 		return m.requestQuit(false)
 	case "esc":
