@@ -51,7 +51,7 @@ func (m *Model) renderTab(b *buffer) (string, int) {
 	}
 
 	left := base.Foreground(iconFg).Render("  ") + base.Foreground(fg).Bold(active).Render(name)
-	if b.draft() {
+	if b.draft() && !b.isGraph() {
 		left += base.Foreground(th.GreyFg).Italic(true).Render(" new")
 	}
 	s := left + base.Render("  ") + base.Foreground(closeFg).Render(closeGlyph) + base.Render(" ")
@@ -218,6 +218,9 @@ func (m *Model) statusline() string {
 
 	// Right side, dropped piece by piece when the terminal is narrow.
 	var parts []string
+	if b != nil && b.isGraph() {
+		b = nil // no text: no word count or file type
+	}
 	if b != nil {
 		words := len(strings.Fields(m.liveText(b)))
 		unit := "words"
