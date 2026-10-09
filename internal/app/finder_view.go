@@ -157,7 +157,7 @@ func (m *Model) openInCurrentBuffer(id string) tea.Cmd {
 	cur := m.activeBuffer()
 	if cur == nil || m.isDirty(cur) || cur.isGraph() {
 		cmd := m.openFile(id)
-		if cur != nil {
+		if cur != nil && !cur.isGraph() {
 			m.setStatus(fmt.Sprintf("Opened in a new tab — %s has unsaved changes", cur.fileName()))
 		}
 		return cmd

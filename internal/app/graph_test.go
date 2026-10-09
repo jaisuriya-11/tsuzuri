@@ -153,3 +153,18 @@ func TestGraphPansAndClicks(t *testing.T) {
 		t.Fatalf("a second click should open Other:\n%s", v)
 	}
 }
+
+// Regression: the graph tab showed the "new" marker of unsaved notes, and
+// following a link in the preview from the graph tab claimed the graph had
+// unsaved changes.
+func TestGraphTabIsNotAnUnsavedNote(t *testing.T) {
+	h := graphWorkspace(t)
+	if v := h.view(); strings.Contains(v, "Graph new") || strings.Contains(v, "unsaved") || strings.Contains(v, "0 words") {
+		t.Fatalf("the graph tab should not look like an unsaved note:\n%s", v)
+	}
+	h.clickPreview("Untitled-1") // the preview of Untitled-2 links to it
+	v := h.view()
+	if strings.Contains(v, "unsaved changes") || !strings.Contains(v, "1 first [[Untitled-3]]") {
+		t.Fatalf("following a link from the graph tab should just open the note:\n%s", v)
+	}
+}
