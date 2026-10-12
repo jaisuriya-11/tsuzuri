@@ -29,6 +29,11 @@ https://github.com/user-attachments/assets/edccf6de-940e-43ad-a4c2-cf73a77d7a37
 curl -fsSL https://raw.githubusercontent.com/jaisuriya-11/tsuzuri/main/install.sh | sh
 ```
 
+Using [Homebrew](https://brew.sh/):
+```sh
+brew install tsuzuri
+```
+
 **Windows** (PowerShell)
 
 ```powershell
