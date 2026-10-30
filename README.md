@@ -47,6 +47,12 @@ Apple Silicon), Windows 10/11 and any x86-64 Linux distribution. On other
 CPUs (e.g. Raspberry Pi), install with Go.
 A [Nerd Font](https://www.nerdfonts.com/) is recommended for icons.
 
+**VS Code:** install [Tsuzuri for VS Code](https://marketplace.visualstudio.com/items?itemName=jaisuriya-11.tsuzuri)
+to open any note as a Tsuzuri page beside the editor: boards, calendars,
+timelines, charts and forms you can edit in place, plus the `/` block menu.
+It uses your installed Tsuzuri (0.4.0 or later); the source is in
+[`editors/vscode`](editors/vscode).
+
 ## Quick start
 
 ```sh

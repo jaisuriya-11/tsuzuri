@@ -1,9 +1,9 @@
 package app
 
 import (
-	"strings"
 	"time"
 
+	"github.com/jaisuriya-11/tsuzuri/internal/note"
 	"github.com/jaisuriya-11/tsuzuri/internal/preview"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,25 +11,9 @@ import (
 
 // Timeline
 
-func parseSpan(line string) (name string, start, end time.Time, ok bool) {
-	n, span, found := strings.Cut(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "- ")), ":")
-	if !found {
-		return "", start, end, false
-	}
-	a, b, _ := strings.Cut(span, "->")
-	var err error
-	if start, err = time.Parse("2006-01-02", strings.TrimSpace(a)); err != nil {
-		return "", start, end, false
-	}
-	if end, err = time.Parse("2006-01-02", strings.TrimSpace(b)); err != nil || end.Before(start) {
-		end = start
-	}
-	return strings.TrimSpace(n), start, end, true
-}
+func parseSpan(line string) (name string, start, end time.Time, ok bool) { return note.ParseSpan(line) }
 
-func spanLine(name string, start, end time.Time) string {
-	return name + ": " + start.Format("2006-01-02") + " -> " + end.Format("2006-01-02")
-}
+func spanLine(name string, start, end time.Time) string { return note.SpanLine(name, start, end) }
 
 func (m *Model) timelineHit(h preview.Hit) tea.Cmd {
 	switch h.Kind {

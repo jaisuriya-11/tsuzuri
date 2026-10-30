@@ -13,7 +13,7 @@ tsuzuri.log
 
 # IDE & OS files
 .DS_Store
-.vscode/
+/.vscode/
 .idea/
 
 # Release artifacts

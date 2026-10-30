@@ -172,6 +172,24 @@ func TestSlashMenuInsertsBlocks(t *testing.T) {
 	}
 }
 
+func TestSlashMenuInsideATableCell(t *testing.T) {
+	c := content.New(theme.DefaultTheme())
+	c.SetSize(80, 20)
+	c.SetPage(core.Page{ID: "a.md", Content: "| a | b |\n| --- | --- |\n| x |"})
+	c.SetFocused(true)
+	c = keys(c, "GA /")
+	box, _, _, ok := c.SlashView()
+	if !ok || !strings.Contains(box, "To-do") || !strings.Contains(box, "Add row below") || strings.Contains(box, "Heading 1") {
+		t.Fatalf("expected only cell-safe entries and table actions, got %q", box)
+	}
+	c = keys(c, "todo")
+	c, _ = c.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	c = keys(c, "ship")
+	if !strings.HasSuffix(c.Value(), "\n| x | [ ] ship") {
+		t.Fatalf("expected a checkbox in the cell, got %q", c.Value())
+	}
+}
+
 func TestTabIndents(t *testing.T) {
 	c := content.New(theme.DefaultTheme())
 	c.SetSize(80, 10)

@@ -1,10 +1,10 @@
 package app
 
 import (
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/jaisuriya-11/tsuzuri/internal/note"
 	"github.com/jaisuriya-11/tsuzuri/internal/preview"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -62,47 +62,11 @@ func (m *Model) chooseQuestionType(text, options string, done func(*Model, strin
 	return nil
 }
 
-// answerLine returns the "= answer" line belonging to question line q, or -1.
-func answerLine(lines []string, q int) int {
-	if q+1 < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[q+1]), "=") {
-		return q + 1
-	}
-	return -1
-}
+func answerLine(lines []string, q int) int { return note.AnswerLine(lines, q) }
 
-func (m *Model) setAnswer(q int, value string) {
-	lines := m.docLines()
-	at := answerLine(lines, q)
-	switch {
-	case value == "" && at >= 0:
-		lines = removeAt(lines, at, 1)
-	case value == "":
-	case at >= 0:
-		lines[at] = "  = " + value
-	default:
-		lines = insertAt(lines, q+1, "  = "+value)
-	}
-	m.setDocLines(lines)
-}
+func (m *Model) setAnswer(q int, value string) { m.setDocLines(note.SetAnswer(m.docLines(), q, value)) }
 
-func (m *Model) currentAnswer(q int) string {
-	lines := m.docLines()
-	if at := answerLine(lines, q); at >= 0 {
-		return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(lines[at]), "="))
-	}
-	return ""
-}
-
-func questionOptions(line string) []string {
-	_, opts, _ := strings.Cut(line, ":")
-	var out []string
-	for _, o := range strings.Split(opts, "|") {
-		if o = strings.TrimSpace(o); o != "" {
-			out = append(out, o)
-		}
-	}
-	return out
-}
+func (m *Model) currentAnswer(q int) string { return note.Answer(m.docLines(), q) }
 
 func (m *Model) formHit(h preview.Hit) tea.Cmd {
 	lines := m.docLines()
@@ -138,53 +102,19 @@ func (m *Model) formHit(h preview.Hit) tea.Cmd {
 		})
 
 	case "form:option":
-		opts := questionOptions(lines[h.Line])
-		if h.Index < len(opts) {
-			v := opts[h.Index]
-			if m.currentAnswer(h.Line) == v {
-				v = ""
-			}
-			m.setAnswer(h.Line, v)
-		}
+		m.setDocLines(note.PickAnswer(lines, h.Line, "pick", h.Index))
 
 	case "form:multi":
-		opts := questionOptions(lines[h.Line])
-		if h.Index < len(opts) {
-			picked := map[string]bool{}
-			for _, a := range strings.Split(m.currentAnswer(h.Line), ",") {
-				if a = strings.TrimSpace(a); a != "" {
-					picked[a] = true
-				}
-			}
-			picked[opts[h.Index]] = !picked[opts[h.Index]]
-			var keep []string
-			for _, o := range opts {
-				if picked[o] {
-					keep = append(keep, o)
-				}
-			}
-			m.setAnswer(h.Line, strings.Join(keep, ", "))
-		}
+		m.setDocLines(note.PickAnswer(lines, h.Line, "toggle", h.Index))
 
 	case "form:rating":
-		v := strconv.Itoa(h.Index)
-		if m.currentAnswer(h.Line) == v {
-			v = ""
-		}
-		m.setAnswer(h.Line, v)
+		m.setDocLines(note.PickAnswer(lines, h.Line, "rate", h.Index))
 
 	case "form:addopt":
 		return m.prompt("New option for "+h.Arg, "", "", func(m *Model, v string) tea.Cmd {
-			if v == "" {
-				return nil
+			if v != "" {
+				m.setDocLines(note.AddOption(m.docLines(), h.Line, v))
 			}
-			lines := m.docLines()
-			if strings.Contains(lines[h.Line], ":") {
-				lines[h.Line] = strings.TrimRight(lines[h.Line], " ") + " | " + v
-			} else {
-				lines[h.Line] += ": " + v
-			}
-			m.setDocLines(lines)
 			return nil
 		})
 
@@ -219,7 +149,7 @@ func (m *Model) formHit(h preview.Hit) tea.Cmd {
 				if required {
 					prefix = "?* "
 				}
-				opts := strings.Join(questionOptions(lines[h.Line]), " | ")
+				opts := strings.Join(note.ParseQuestion(lines[h.Line]).Options, " | ")
 				return m.chooseQuestionType(h.Arg, opts, func(m *Model, line string) {
 					lines := m.docLines()
 					lines[h.Line] = prefix + strings.TrimPrefix(line, "? ")

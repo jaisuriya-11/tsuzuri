@@ -23,22 +23,40 @@ type boardColumn struct {
 	cards []boardCard
 }
 
-func statusColor(name string, i int, th theme.Theme) lipgloss.Color {
+// statusTone reads what a board column's name says about its cards:
+// "done", "progress", "todo", "blocked", or "" for none of these.
+func statusTone(name string) string {
 	n := strings.ToLower(name)
 	switch {
 	case strings.Contains(n, "done") || strings.Contains(n, "complete") || strings.Contains(n, "shipped"):
-		return th.Green
+		return "done"
 	case strings.Contains(n, "progress") || strings.Contains(n, "doing") || strings.Contains(n, "review"):
-		return th.Blue
+		return "progress"
 	case strings.Contains(n, "not") || strings.Contains(n, "todo") || strings.Contains(n, "backlog"):
-		return th.GreyFg2
+		return "todo"
 	case strings.Contains(n, "block") || strings.Contains(n, "stuck"):
+		return "blocked"
+	}
+	return ""
+}
+
+func statusColor(name string, i int, th theme.Theme) lipgloss.Color {
+	switch statusTone(name) {
+	case "done":
+		return th.Green
+	case "progress":
+		return th.Blue
+	case "todo":
+		return th.GreyFg2
+	case "blocked":
 		return th.Red
 	}
 	return palette(th)[(i+2)%len(palette(th))]
 }
 
-func renderBoard(body []string, th theme.Theme, width int, hs *[]Hit) []string {
+// parseBoard reads "## Column" headings and "- card" lines; other text
+// under a card is its description.
+func parseBoard(body []string) []boardColumn {
 	var cols []boardColumn
 	for i, l := range body {
 		t := strings.TrimSpace(l)
@@ -59,6 +77,11 @@ func renderBoard(body []string, th theme.Theme, width int, hs *[]Hit) []string {
 			last.desc = append(last.desc, t)
 		}
 	}
+	return cols
+}
+
+func renderBoard(body []string, th theme.Theme, width int, hs *[]Hit) []string {
+	cols := parseBoard(body)
 	if len(cols) == 0 {
 		return []string{lipgloss.NewStyle().Foreground(th.GreyFg).Render("(empty board: add \"## Column\" headings and \"- card\" lines)")}
 	}

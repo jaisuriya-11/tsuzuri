@@ -276,6 +276,18 @@ func splitRow(line string) []string {
 	return cells
 }
 
+// cell renders a table cell; one starting with "[ ]" or "[x]" shows a
+// checkbox, like a to-do.
+func (c *compiler) cell(text string, st lipgloss.Style) string {
+	switch {
+	case strings.HasPrefix(text, "[ ] ") || text == "[ ]":
+		return lipgloss.NewStyle().Foreground(c.st.th.GreyFg2).Render("󰄱 ") + c.inline(strings.TrimPrefix(text[3:], " "), st)
+	case strings.HasPrefix(strings.ToLower(text), "[x] ") || strings.ToLower(text) == "[x]":
+		return lipgloss.NewStyle().Foreground(c.st.th.Green).Render("󰄲 ") + c.inline(strings.TrimPrefix(text[3:], " "), c.st.muted.Strikethrough(true))
+	}
+	return c.inline(text, st)
+}
+
 // table draws a pipe table whose header is on document line docStart and
 // records clickable cells plus "add row / add column" buttons.
 func (c *compiler) table(rows [][]string, docStart int) {
@@ -294,7 +306,7 @@ func (c *compiler) table(rows [][]string, docStart int) {
 				if i == 0 {
 					st = st.Bold(true).Foreground(c.st.th.Blue)
 				}
-				cell = c.inline(r[j], st)
+				cell = c.cell(r[j], st)
 			}
 			rendered[i][j] = cell
 			widths[j] = max(widths[j], ansi.StringWidth(cell))

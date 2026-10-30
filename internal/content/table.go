@@ -138,25 +138,36 @@ func (m Model) InTable() bool {
 	return ok
 }
 
-// tableOp applies a table edit at the cursor and re-aligns the table. It
-// returns false when the cursor is not in a table.
-func (m *Model) tableOp(op string) bool {
-	lines := strings.Split(m.textarea.Value(), "\n")
-	row, col := m.textarea.RowCol()
+// TableEdit is the result of EditTable: lines [Start, End) of the note are
+// replaced by Lines, and the cursor moves to Row, Col (a rune column).
+type TableEdit struct {
+	Start int      `json:"start"`
+	End   int      `json:"end"`
+	Lines []string `json:"lines"`
+	Row   int      `json:"row"`
+	Col   int      `json:"col"`
+}
+
+// EditTable applies a table operation ("addrow", "addcol", "delrow",
+// "delcol" or "format") to the table holding row, with the cursor at rune
+// column col, and re-aligns it. ok is false when row is not in a table. An
+// edit that would remove the header, the separator or the last column
+// leaves the table alone and returns an edit with no Lines.
+func EditTable(lines []string, row, col int, op string) (edit TableEdit, ok bool) {
 	start, end, ok := tableAt(lines, row)
 	if !ok {
-		return false
+		return TableEdit{}, false
 	}
 	rows := make([][]string, 0, end-start)
-	for _, l := range lines[start:end] {
-		rows = append(rows, splitCells(l))
-	}
-	r := row - start
-	c := cellIndex(lines[row], col)
 	cols := 0
-	for _, cells := range rows {
+	for _, l := range lines[start:end] {
+		cells := splitCells(l)
+		rows = append(rows, cells)
 		cols = max(cols, len(cells))
 	}
+	r := row - start
+	// A cursor after the closing pipe still belongs to the last cell.
+	c := min(cellIndex(lines[row], col), cols-1)
 	sepIdx := -1
 	if len(rows) > 1 && isSeparator(rows[1]) {
 		sepIdx = 1
@@ -165,10 +176,7 @@ func (m *Model) tableOp(op string) bool {
 	targetRow, targetCell := r, c
 	switch op {
 	case "addrow":
-		at := r + 1
-		if at <= sepIdx {
-			at = sepIdx + 1
-		}
+		at := max(r+1, sepIdx+1)
 		rows = append(rows[:at], append([][]string{make([]string, cols)}, rows[at:]...)...)
 		targetRow, targetCell = at, 0
 	case "addcol":
@@ -187,13 +195,13 @@ func (m *Model) tableOp(op string) bool {
 		targetCell = c + 1
 	case "delrow":
 		if r == sepIdx || (r == 0 && sepIdx >= 0) || len(rows) <= 1 {
-			return true // keep the header and separator
+			return TableEdit{Start: start, End: end}, true // keep the header and separator
 		}
 		rows = append(rows[:r], rows[r+1:]...)
 		targetRow = min(r, len(rows)-1)
 	case "delcol":
 		if cols <= 1 {
-			return true
+			return TableEdit{Start: start, End: end}, true
 		}
 		for i := range rows {
 			if c < len(rows[i]) {
@@ -201,17 +209,34 @@ func (m *Model) tableOp(op string) bool {
 			}
 		}
 		targetCell = min(c, cols-2)
-	case "format":
 	}
 
 	formatted := formatTable(rows)
-	out := append(append(append([]string{}, lines[:start]...), formatted...), lines[end:]...)
-	m.textarea.SetValue(strings.Join(out, "\n"))
 	if targetRow == sepIdx {
 		targetRow++
 	}
 	targetRow = min(targetRow, len(formatted)-1)
-	m.textarea.SetRowCol(start+targetRow, cellStart(formatted[targetRow], targetCell))
+	return TableEdit{
+		Start: start,
+		End:   end,
+		Lines: formatted,
+		Row:   start + targetRow,
+		Col:   cellStart(formatted[targetRow], targetCell),
+	}, true
+}
+
+// tableOp applies a table edit at the cursor. It returns false when the
+// cursor is not in a table.
+func (m *Model) tableOp(op string) bool {
+	lines := strings.Split(m.textarea.Value(), "\n")
+	row, col := m.textarea.RowCol()
+	edit, ok := EditTable(lines, row, col, op)
+	if !ok || edit.Lines == nil {
+		return ok
+	}
+	out := append(append(append([]string{}, lines[:edit.Start]...), edit.Lines...), lines[edit.End:]...)
+	m.textarea.SetValue(strings.Join(out, "\n"))
+	m.textarea.SetRowCol(edit.Row, edit.Col)
 	return true
 }
 

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/jaisuriya-11/tsuzuri/internal/app"
+	"github.com/jaisuriya-11/tsuzuri/internal/bridge"
 	"github.com/jaisuriya-11/tsuzuri/internal/config"
 	"github.com/jaisuriya-11/tsuzuri/internal/core"
 	"github.com/jaisuriya-11/tsuzuri/internal/export"
@@ -26,6 +27,9 @@ var version = "dev"
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "export" {
 		os.Exit(runExport(os.Args[2:]))
+	}
+	if len(os.Args) > 1 && os.Args[1] == "editor" {
+		os.Exit(runEditor(os.Args[2:]))
 	}
 
 	var (
@@ -137,6 +141,19 @@ func logFilePath() string {
 		return "tsuzuri.log"
 	}
 	return filepath.Join(dir, "tsuzuri.log")
+}
+
+// runEditor handles "tsuzuri editor <command>", which editor integrations
+// such as the VS Code extension call to reuse the app's logic.
+func runEditor(args []string) int {
+	cfg, err := config.Load(config.DefaultPath())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Ignoring unreadable config: %v\n", err)
+	}
+	if cfg.ThemesDir != "" {
+		theme.SetUserThemesPath(cfg.ThemesDir)
+	}
+	return bridge.Run(args, bridge.Options{Theme: cfg.Theme}, os.Stdin, os.Stdout, os.Stderr)
 }
 
 // runExport handles "tsuzuri export note.md [-o out.pdf]".

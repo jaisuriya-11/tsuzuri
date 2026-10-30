@@ -69,9 +69,9 @@ func fmtNum(v float64) string {
 	return strconv.FormatFloat(v, 'f', 1, 64)
 }
 
-func renderChart(body []string, th theme.Theme, width int, hs *[]Hit) []string {
-	meta, _ := keyValues(body, "type", "title", "height")
-	var data []datum
+// parseChart reads "Label: 12" lines and the type, title and height keys.
+func parseChart(body []string) (meta map[string]string, data []datum) {
+	meta, _ = keyValues(body, "type", "title", "height")
 	for i, l := range body {
 		k, v, ok := strings.Cut(strings.TrimPrefix(strings.TrimSpace(l), "- "), ":")
 		switch strings.ToLower(strings.TrimSpace(k)) {
@@ -87,6 +87,30 @@ func renderChart(body []string, th theme.Theme, width int, hs *[]Hit) []string {
 		}
 		data = append(data, datum{strings.TrimSpace(k), f, i})
 	}
+	return meta, data
+}
+
+// chartKind is the chart a type key asks for: bar, hbar, line, pie or donut.
+func chartKind(t string) string {
+	switch t = strings.ToLower(t); t {
+	case "hbar", "barh", "horizontal":
+		return "hbar"
+	case "line", "pie", "donut":
+		return t
+	}
+	return "bar"
+}
+
+// chartHeight is the height key when it's sensible, else 10 rows.
+func chartHeight(h string) int {
+	if n, err := strconv.Atoi(h); err == nil && n >= 3 && n <= 30 {
+		return n
+	}
+	return 10
+}
+
+func renderChart(body []string, th theme.Theme, width int, hs *[]Hit) []string {
+	meta, data := parseChart(body)
 	muted := lipgloss.NewStyle().Foreground(th.GreyFg)
 	var out []string
 	if t := meta["title"]; t != "" {
@@ -96,19 +120,16 @@ func renderChart(body []string, th theme.Theme, width int, hs *[]Hit) []string {
 		addHit(hs, Hit{Row: len(out) + 1, X1: 13, Kind: "chart:add", Line: -1})
 		return append(out, muted.Render("(empty chart: add \"Label: 12\" lines)"), muted.Render("+ Add value"))
 	}
-	height := 10
-	if h, err := strconv.Atoi(meta["height"]); err == nil && h >= 3 && h <= 30 {
-		height = h
-	}
+	height := chartHeight(meta["height"])
 	var chart []string
 	var local []Hit
-	switch strings.ToLower(meta["type"]) {
-	case "hbar", "barh", "horizontal":
+	switch kind := chartKind(meta["type"]); kind {
+	case "hbar":
 		chart = hbarChart(data, th, width, &local)
 	case "line":
 		chart = lineChart(data, th, width, height, &local)
 	case "pie", "donut":
-		chart = pieChart(data, th, width, strings.ToLower(meta["type"]) == "donut", &local)
+		chart = pieChart(data, th, width, kind == "donut", &local)
 	default:
 		chart = barChart(data, th, width, height, &local)
 	}
