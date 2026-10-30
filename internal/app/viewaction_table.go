@@ -3,6 +3,7 @@ package app
 import (
 	"strings"
 
+	"github.com/jaisuriya-11/tsuzuri/internal/note"
 	"github.com/jaisuriya-11/tsuzuri/internal/preview"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -32,6 +33,14 @@ func (m *Model) tableHit(h preview.Hit) tea.Cmd {
 			edit = "Rename column"
 		}
 		items := []string{edit, "Add row below", "Add column right", "Delete column"}
+		toggled, hasBox := note.ToggleBox(h.Arg, 0)
+		if hasBox && !header {
+			tick := "Tick"
+			if strings.Contains(toggled, "[ ]") {
+				tick = "Untick"
+			}
+			items = append([]string{tick}, items...)
+		}
 		if !header {
 			items = append(items, "Delete row")
 		}
@@ -41,6 +50,8 @@ func (m *Model) tableHit(h preview.Hit) tea.Cmd {
 		}
 		m.menu(label, items, func(m *Model, choice int) tea.Cmd {
 			switch items[choice] {
+			case "Tick", "Untick":
+				m.content.SetTableCell(h.Line, h.Index, toggled)
 			case "Edit cell", "Rename column":
 				return m.prompt(edit, h.Arg, "", func(m *Model, v string) tea.Cmd {
 					m.content.SetTableCell(h.Line, h.Index, v)

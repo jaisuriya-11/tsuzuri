@@ -20,6 +20,10 @@ type slashItem struct {
 	after   string // inserted after the cursor
 	action  string // "page" / "link" are handled by the app
 	block   bool   // starts its own line
+	// cell marks entries that also work inside a table cell; cellBefore and
+	// cellAfter replace before and after there (an action needs neither).
+	cell                  bool
+	cellBefore, cellAfter string
 }
 
 var slashItems = []slashItem{
@@ -34,7 +38,7 @@ var slashItems = []slashItem{
 	{section: "Basic blocks", icon: "\U000f026e", label: "Heading 4", hint: "####", aliases: "h4", before: "#### ", block: true},
 	{section: "Basic blocks", icon: "\U000f0279", label: "Bulleted list", hint: "-", aliases: "bullet ul unordered", before: "- ", block: true},
 	{section: "Basic blocks", icon: "\U000f027b", label: "Numbered list", hint: "1.", aliases: "ol ordered number", before: "1. ", block: true},
-	{section: "Basic blocks", icon: "\U000f0135", label: "To-do list", hint: "[]", aliases: "todo task checkbox check", before: "- [ ] ", block: true},
+	{section: "Basic blocks", icon: "\U000f0135", label: "To-do list", hint: "[]", aliases: "todo task checkbox check", before: "- [ ] ", block: true, cell: true, cellBefore: "[ ] "},
 	{section: "Basic blocks", icon: "\U000f0142", label: "Toggle list", hint: ">", aliases: "details collapse", before: "<details>\n<summary>", after: "</summary>\n\n</details>", block: true},
 	{section: "Basic blocks", icon: "\U000f0219", label: "Page", aliases: "subpage sub-note note new", action: "page"},
 	{section: "Basic blocks", icon: "\U000f02fd", label: "Callout", aliases: "note tip info admonition", before: "> [!NOTE]\n> ", block: true},
@@ -45,7 +49,7 @@ var slashItems = []slashItem{
 	{section: "Basic blocks", icon: "\U000f0bcc", label: "2 columns", hint: "+++", aliases: "columns cols layout side split", before: "~~~columns\n", after: "\n+++\nColumn 2\n~~~", block: true},
 	{section: "Basic blocks", icon: "\U000f056d", label: "3 columns", hint: "+++", aliases: "columns cols layout side split", before: "~~~columns\n", after: "\n+++\nColumn 2\n+++\nColumn 3\n~~~", block: true},
 	{section: "Basic blocks", icon: "\U000f0728", label: "4 columns", hint: "+++", aliases: "columns cols layout side split", before: "~~~columns\n", after: "\n+++\nColumn 2\n+++\nColumn 3\n+++\nColumn 4\n~~~", block: true},
-	{section: "Basic blocks", icon: "\U000f0337", label: "Link to page", aliases: "mention reference note", action: "link"},
+	{section: "Basic blocks", icon: "\U000f0337", label: "Link to page", aliases: "mention reference note", action: "link", cell: true},
 	{section: "Views", icon: "\U000f0564", label: "Board", hint: "kanban", aliases: "kanban status tasks", before: "```board\n## Not started\n- ", after: "\n## In progress\n- Card 2\n  Lines under a card are its description\n## Done\n- Card 3\n```", block: true},
 	{section: "Views", icon: "\U000f00ed", label: "Calendar", aliases: "month events dates", before: "```calendar\nmonth: " + time.Now().Format("2006-01") + "\n" + time.Now().Format("2006-01-02") + ": ", after: "\n```", block: true},
 	{section: "Views", icon: "\U000f0b77", label: "Timeline", hint: "gantt", aliases: "gantt schedule roadmap", before: "```timeline\n", after: "Card 1: " + time.Now().AddDate(0, 0, -3).Format("2006-01-02") + " -> " + time.Now().AddDate(0, 0, 2).Format("2006-01-02") + "\nCard 2: " + time.Now().Format("2006-01-02") + " -> " + time.Now().AddDate(0, 0, 4).Format("2006-01-02") + "\n```", block: true},
@@ -53,11 +57,52 @@ var slashItems = []slashItem{
 	{section: "Views", icon: "\U000f0b4b", label: "Form", aliases: "survey questions questionnaire", before: "```form\ntitle: ", after: "\ndescription: Optional description\n? Question 1\n? Question 2 (choice): Option 1 | Option 2 | Option 3\n```", block: true},
 	{section: "Views", icon: "\U000f04aa", label: "Flowchart", hint: "-->", aliases: "flow diagram graph mermaid excalidraw chart process", before: "```flow\nstart([Start]) --> ", after: "check{Is it working?}\ncheck -->|yes| done([Ship it])\ncheck -->|no| fix[Fix it]\nfix --> check\n```", block: true},
 	{section: "Media", icon: "\U000f0e7c", label: "Cover", hint: "banner", aliases: "banner header hero", action: "media:cover"},
-	{section: "Media", icon: "\U000f02e9", label: "Image", aliases: "picture photo img upload", action: "media:image"},
-	{section: "Media", icon: "\U000f0567", label: "Video", aliases: "movie upload", action: "media:video"},
-	{section: "Media", icon: "\U000f075a", label: "Audio", aliases: "sound music upload", action: "media:audio"},
-	{section: "Media", icon: "\U000f0214", label: "File", aliases: "attachment pdf upload document", action: "media:file"},
-	{section: "Media", icon: "\U000f0169", label: "Code", hint: "```", aliases: "snippet block pre", before: "```\n", after: "\n```", block: true},
+	{section: "Media", icon: "\U000f02e9", label: "Image", aliases: "picture photo img upload", action: "media:image", cell: true},
+	{section: "Media", icon: "\U000f0567", label: "Video", aliases: "movie upload", action: "media:video", cell: true},
+	{section: "Media", icon: "\U000f075a", label: "Audio", aliases: "sound music upload", action: "media:audio", cell: true},
+	{section: "Media", icon: "\U000f0214", label: "File", aliases: "attachment pdf upload document", action: "media:file", cell: true},
+	{section: "Media", icon: "\U000f0169", label: "Code", hint: "```", aliases: "snippet block pre", before: "```\n", after: "\n```", block: true, cell: true, cellBefore: "`", cellAfter: "`"},
+}
+
+// Block is a "/" menu entry as other editors (the VS Code extension) offer
+// it: Before and After surround the cursor, or Action names what the editor
+// does instead ("page", "link", "media:image", "table:addrow" …). Table
+// entries only apply inside a table, and there only entries marked Cell.
+type Block struct {
+	Section string `json:"section"`
+	Label   string `json:"label"`
+	Hint    string `json:"hint,omitempty"`
+	Aliases string `json:"aliases,omitempty"`
+	Before  string `json:"before,omitempty"`
+	After   string `json:"after,omitempty"`
+	Action  string `json:"action,omitempty"`
+	Block   bool   `json:"block,omitempty"`
+	// Cell marks entries that work inside a table cell, where CellBefore
+	// and CellAfter are inserted instead of Before and After.
+	Cell       bool   `json:"cell,omitempty"`
+	CellBefore string `json:"cellBefore,omitempty"`
+	CellAfter  string `json:"cellAfter,omitempty"`
+}
+
+// Blocks returns the "/" menu in display order.
+func Blocks() []Block {
+	out := make([]Block, len(slashItems))
+	for i, it := range slashItems {
+		out[i] = Block{
+			Section:    it.section,
+			Label:      it.label,
+			Hint:       it.hint,
+			Aliases:    it.aliases,
+			Before:     it.before,
+			After:      it.after,
+			Action:     it.action,
+			Block:      it.block,
+			Cell:       it.cell,
+			CellBefore: it.cellBefore,
+			CellAfter:  it.cellAfter,
+		}
+	}
+	return out
 }
 
 const (
@@ -96,7 +141,8 @@ func (m *Model) slashMatches() []slashItem {
 	inTable := m.InTable()
 	var out []slashItem
 	for _, it := range slashItems {
-		if it.section == "Table" && !inTable {
+		// Inside a table only what fits in a cell is offered.
+		if (it.section == "Table") != inTable && !(inTable && it.cell) {
 			continue
 		}
 		if q == "" || strings.Contains(strings.ToLower(it.label+" "+it.aliases), q) {
@@ -195,13 +241,16 @@ func (m *Model) applySlash(it slashItem) tea.Cmd {
 		action := it.action
 		return func() tea.Msg { return core.SlashActionMsg{Action: action} }
 	}
-	if it.block && strings.TrimSpace(ta.LineBeforeCursor()) != "" {
+	before, after := it.before, it.after
+	if it.cell && m.InTable() {
+		before, after = it.cellBefore, it.cellAfter
+	} else if it.block && strings.TrimSpace(ta.LineBeforeCursor()) != "" {
 		ta.InsertString("\n")
 	}
-	ta.InsertString(it.before)
+	ta.InsertString(before)
 	row, col := ta.RowCol()
-	if it.after != "" {
-		ta.InsertString(it.after)
+	if after != "" {
+		ta.InsertString(after)
 		ta.SetRowCol(row, col)
 	}
 	ta.EnsureVisible()
@@ -211,37 +260,10 @@ func (m *Model) applySlash(it slashItem) tea.Cmd {
 // SetFrontMatter sets key: value in the note's leading "---" block,
 // creating the block if needed, and keeps the cursor on the same text.
 func (m *Model) SetFrontMatter(key, value string) {
-	text := m.textarea.Value()
 	row, col := m.textarea.RowCol()
-	lines := strings.Split(text, "\n")
-	entry := key + ": " + value
-	added := 0
-	if len(lines) > 1 && lines[0] == "---" {
-		end := -1
-		for i := 1; i < len(lines); i++ {
-			if lines[i] == "---" {
-				end = i
-				break
-			}
-		}
-		if end > 0 {
-			replaced := false
-			for i := 1; i < end; i++ {
-				if strings.HasPrefix(strings.ToLower(lines[i]), key+":") {
-					lines[i], replaced = entry, true
-				}
-			}
-			if !replaced {
-				lines = append(lines[:end], append([]string{entry}, lines[end:]...)...)
-				added = 1
-			}
-			m.textarea.SetValue(strings.Join(lines, "\n"))
-			m.textarea.SetRowCol(row+added, col)
-			return
-		}
-	}
-	m.textarea.SetValue("---\n" + entry + "\n---\n" + text)
-	m.textarea.SetRowCol(row+3, col)
+	text, added := WithFrontMatter(m.textarea.Value(), key, value)
+	m.textarea.SetValue(text)
+	m.textarea.SetRowCol(row+added, col)
 }
 
 // InsertText types text at the cursor (used for "Link to page").

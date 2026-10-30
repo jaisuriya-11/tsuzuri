@@ -3,6 +3,7 @@ package app
 import (
 	"strings"
 
+	"github.com/jaisuriya-11/tsuzuri/internal/note"
 	"github.com/jaisuriya-11/tsuzuri/internal/preview"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,44 +20,14 @@ type boardCol struct {
 
 func boardColumns(lines []string, h preview.Hit) []boardCol {
 	var cols []boardCol
-	for i := h.Block + 1; i < h.End && i < len(lines); i++ {
-		t := strings.TrimSpace(lines[i])
-		switch {
-		case strings.HasPrefix(t, "#"):
-			cols = append(cols, boardCol{name: strings.TrimSpace(strings.TrimLeft(t, "#")), line: i})
-		case strings.HasPrefix(t, "- ") || strings.HasPrefix(t, "* "):
-			if len(cols) == 0 {
-				cols = append(cols, boardCol{name: "Cards", line: -1})
-			}
-			cols[len(cols)-1].cardLine = append(cols[len(cols)-1].cardLine, i)
-		}
-	}
-	for c := range cols {
-		end := h.End
-		if c+1 < len(cols) {
-			end = cols[c+1].line
-		}
-		// New cards go after the last non-blank line of the column.
-		for end-1 > cols[c].line && end-1 > h.Block && strings.TrimSpace(lines[end-1]) == "" {
-			end--
-		}
-		cols[c].endLine = end
+	for _, c := range note.BoardColumns(lines, h.Block, h.End) {
+		cols = append(cols, boardCol{name: c.Name, line: c.Line, endLine: c.EndLine, cardLine: c.Cards})
 	}
 	return cols
 }
 
 // cardExtent is the card line plus its description lines.
-func cardExtent(lines []string, at, end int) int {
-	n := 1
-	for i := at + 1; i < end && i < len(lines); i++ {
-		t := strings.TrimSpace(lines[i])
-		if strings.HasPrefix(t, "#") || strings.HasPrefix(t, "- ") || strings.HasPrefix(t, "* ") || t == "" {
-			break
-		}
-		n++
-	}
-	return n
-}
+func cardExtent(lines []string, at, end int) int { return note.CardExtent(lines, at, end) }
 
 func (m *Model) boardHit(h preview.Hit) tea.Cmd {
 	lines := m.docLines()

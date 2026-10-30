@@ -37,12 +37,22 @@ func parseEvents(lines []string) []event {
 	return out
 }
 
-func renderCalendar(body []string, th theme.Theme, width int, cal CalendarView, hs *[]Hit) []string {
+// calendarMonth is the month a calendar shows: its "month:" key, or this
+// month.
+func calendarMonth(body []string) time.Time {
 	meta, _ := keyValues(body, "month")
+	if m, err := time.Parse("2006-01", meta["month"]); err == nil {
+		return m
+	}
 	today := now()
-	month := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.UTC)
-	if m, err := time.Parse("2006-01", meta["month"]); err == nil && !cal.Today {
-		month = m
+	return time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.UTC)
+}
+
+func renderCalendar(body []string, th theme.Theme, width int, cal CalendarView, hs *[]Hit) []string {
+	today := now()
+	month := calendarMonth(body)
+	if cal.Today {
+		month = time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.UTC)
 	}
 	month = month.AddDate(0, cal.Shift, 0)
 	events := parseEvents(body)

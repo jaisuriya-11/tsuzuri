@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/jaisuriya-11/tsuzuri/internal/content"
 )
 
 // mediaKind describes what the "/" menu asked to attach.
@@ -166,22 +168,7 @@ func (m *Model) attachMedia(kind, src string) {
 		m.setStatus("Cover set to " + link)
 		return
 	}
-	name := strings.TrimSuffix(filepath.Base(src), filepath.Ext(src))
-	target := link
-	if strings.ContainsAny(target, " ()") {
-		target = "<" + target + ">"
-	}
-	var md string
-	switch kind {
-	case "image":
-		md = "![" + name + "](" + target + ")"
-	case "video":
-		md = "[▶ " + name + "](" + target + ")"
-	case "audio":
-		md = "[♪ " + name + "](" + target + ")"
-	default:
-		md = "[📎 " + filepath.Base(src) + "](" + target + ")"
-	}
+	md := content.MediaMarkdown(kind, src, link)
 	m.content.InsertText(md)
 	m.preview.SetContent(m.content.Value())
 	m.refreshModified()

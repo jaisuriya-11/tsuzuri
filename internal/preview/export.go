@@ -55,6 +55,11 @@ func MathRows(body []string) []string {
 	return rows
 }
 
+// MathEquations splits the LaTeX lines of a math block into equations the
+// way the preview does: one per line, with a line that leaves a { open
+// carrying on into the next.
+func MathEquations(body []string) []string { return mathLines(body) }
+
 // IsMathLang reports whether a fence name marks a math block.
 func IsMathLang(lang string) bool {
 	switch lang {

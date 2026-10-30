@@ -11,7 +11,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func renderTimeline(body []string, th theme.Theme, width int, hs *[]Hit) []string {
+// parseSpans reads "Task: 2026-10-01 -> 2026-10-05" lines; a missing or
+// earlier end date makes a one-day span. A "title:" line names the timeline.
+func parseSpans(body []string) []event {
 	var items []event
 	for i, l := range body {
 		name, span, ok := strings.Cut(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(l), "- ")), ":")
@@ -29,10 +31,19 @@ func renderTimeline(body []string, th theme.Theme, width int, hs *[]Hit) []strin
 		}
 		items = append(items, event{date: start, end: end, title: strings.TrimSpace(name), line: i})
 	}
+	return items
+}
+
+func renderTimeline(body []string, th theme.Theme, width int, hs *[]Hit) []string {
+	items := parseSpans(body)
 	muted := lipgloss.NewStyle().Foreground(th.GreyFg)
+	var head []string
+	if meta, _ := keyValues(body, "title"); meta["title"] != "" {
+		head = []string{lipgloss.NewStyle().Foreground(th.Fg).Bold(true).Render(meta["title"]), ""}
+	}
 	if len(items) == 0 {
-		addHit(hs, Hit{Row: 1, X1: 5, Kind: "tl:add", Line: -1})
-		return []string{muted.Render("(empty timeline: add \"Task: 2026-10-01 -> 2026-10-05\" lines)"), muted.Render("+ New")}
+		addHit(hs, Hit{Row: len(head) + 1, X1: 5, Kind: "tl:add", Line: -1})
+		return append(head, muted.Render("(empty timeline: add \"Task: 2026-10-01 -> 2026-10-05\" lines)"), muted.Render("+ New"))
 	}
 
 	first, last := items[0].date, items[0].end
@@ -133,11 +144,11 @@ func renderTimeline(body []string, th theme.Theme, width int, hs *[]Hit) []strin
 	} else {
 		tickLine.WriteString(muted.Render(string(tickRow)))
 	}
-	out := []string{
+	out := append(head,
 		lipgloss.NewStyle().Foreground(th.Fg).Bold(true).Render(string(monthRow)),
 		tickLine.String(),
 		lipgloss.NewStyle().Foreground(th.Line).Render(strings.Repeat("─", width)),
-	}
+	)
 
 	for i, it := range items {
 		a := col(it.date)

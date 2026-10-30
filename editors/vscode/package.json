@@ -1,0 +1,155 @@
+{
+  "name": "tsuzuri",
+  "displayName": "Tsuzuri",
+  "description": "Preview Tsuzuri notes in VS Code with their boards, calendars, timelines, charts, forms, flowcharts and equations, and insert blocks with the / menu.",
+  "version": "0.1.0",
+  "publisher": "jaisuriya-11",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#15171c",
+    "theme": "dark"
+  },
+  "pricing": "Free",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jaisuriya-11/tsuzuri",
+    "directory": "editors/vscode"
+  },
+  "homepage": "https://tsuzuri-site-eyla.vercel.app/",
+  "bugs": {
+    "url": "https://github.com/jaisuriya-11/tsuzuri/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Notebooks",
+    "Other"
+  ],
+  "keywords": [
+    "tsuzuri",
+    "markdown",
+    "notes",
+    "kanban",
+    "board",
+    "calendar",
+    "timeline",
+    "chart",
+    "form",
+    "flowchart",
+    "preview",
+    "slash commands"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:markdown",
+    "onWebviewPanel:tsuzuri.preview"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "tsuzuri.preview",
+        "title": "Open with Tsuzuri",
+        "category": "Tsuzuri",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "tsuzuri.chooseTheme",
+        "title": "Choose Theme",
+        "category": "Tsuzuri"
+      },
+      {
+        "command": "tsuzuri.exportPdf",
+        "title": "Export Note to PDF",
+        "category": "Tsuzuri"
+      },
+      {
+        "command": "tsuzuri.install",
+        "title": "Install Tsuzuri",
+        "category": "Tsuzuri"
+      },
+      {
+        "command": "tsuzuri.slashAction",
+        "title": "Run / Menu Action",
+        "category": "Tsuzuri"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "tsuzuri.preview",
+          "when": "resourceExtname == .md",
+          "group": "navigation@89"
+        },
+        {
+          "command": "tsuzuri.exportPdf",
+          "when": "resourceExtname == .md",
+          "group": "navigation@91"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "tsuzuri.preview",
+          "when": "resourceLangId == markdown && activeWebviewPanelId != tsuzuri.preview",
+          "group": "navigation@90"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "tsuzuri.preview",
+          "when": "resourceExtname == .md"
+        },
+        {
+          "command": "tsuzuri.exportPdf",
+          "when": "resourceExtname == .md"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "tsuzuri.slashAction",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Tsuzuri",
+      "properties": {
+        "tsuzuri.path": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Full path to the `tsuzuri` binary. Leave empty to look on your `PATH` and in the usual install folders.",
+          "scope": "machine"
+        },
+        "tsuzuri.theme": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Tsuzuri theme for flowcharts in the preview. Leave empty to match VS Code: Tsuzuri's own theme when VS Code is dark, a light theme when it's light. Run **Tsuzuri: Choose Theme** to pick one from a list."
+        },
+        "tsuzuri.slashMenu": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Type `/` at the start of a line, or after a space, in a Markdown file to insert Tsuzuri blocks, and get note names after `[[`."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "tsuzuri.preview",
+        "key": "ctrl+alt+v",
+        "mac": "cmd+alt+v",
+        "when": "editorLangId == markdown"
+      }
+    ]
+  },
+  "scripts": {
+    "check": "node --check extension.js && for f in src/*.js media/preview.js test/*.js; do node --check \"$f\" || exit 1; done",
+    "test": "node test/markdown.test.js && node test/slash.test.js",
+    "package": "npx @vscode/vsce package"
+  },
+  "dependencies": {
+    "katex": "^0.16.22",
+    "markdown-it": "^14.1.0"
+  }
+}
