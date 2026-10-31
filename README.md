@@ -11,8 +11,8 @@ Your notes stay plain Markdown files.
   <a href="https://github.com/jaisuriya-11/tsuzuri/actions/workflows/ci.yml"><img src="https://github.com/jaisuriya-11/tsuzuri/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/jaisuriya-11/tsuzuri/releases/latest"><img src="https://img.shields.io/github/v/release/jaisuriya-11/tsuzuri" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+  <a href="https://cli.masoko.net/tools/tsuzuri/"><img src="https://cli.masoko.net/badge/tsuzuri.svg" alt="tsuzuri on The Terminal Index"></a>
 </p>
-
 
 
 
