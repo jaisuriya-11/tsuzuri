@@ -149,7 +149,7 @@
     "package": "npx @vscode/vsce package"
   },
   "dependencies": {
-    "katex": "^0.16.22",
+    "katex": "^0.18.2",
     "markdown-it": "^14.3.3"
   }
 }
